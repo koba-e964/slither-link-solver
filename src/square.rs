@@ -30,6 +30,17 @@ impl Square {
             Square::Four => "4",
         }
     }
+
+    pub fn get_number(self) -> Option<u8> {
+        Some(match self {
+            Square::Blank => return None,
+            Square::Zero => 0,
+            Square::One => 1,
+            Square::Two => 2,
+            Square::Three => 3,
+            Square::Four => 4,
+        })
+    }
 }
 
 /// Parses a URL like https://puzz.link/p?slither_link/9/9/.2zzzy
