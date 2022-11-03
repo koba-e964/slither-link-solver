@@ -24,7 +24,7 @@ mod tests {
     fn get_stat(board: Vec<Vec<Square>>) -> Stat {
         let mut board = Board::new(&board);
         let mut stat = Stat::default();
-        let result = board.search(&mut stat);
+        let result = board.search(&mut stat, 100_000);
         assert!(result);
         stat
     }

@@ -158,7 +158,10 @@ impl<'sq> Board<'sq> {
         }
     }
 
-    pub fn search(&mut self, stat: &mut Stat) -> bool {
+    pub fn search(&mut self, stat: &mut Stat, limit: u64) -> bool {
+        if stat.num_call >= limit {
+            return false;
+        }
         stat.num_call += 1;
         if self.finished() {
             return true;
@@ -170,7 +173,7 @@ impl<'sq> Board<'sq> {
         let m = self.init[0].len();
         let old = self.clone();
         if self.fill_determined().is_some() {
-            if self.search(stat) {
+            if self.search(stat, limit) {
                 return true;
             }
             *self = old;
@@ -186,12 +189,15 @@ impl<'sq> Board<'sq> {
                     continue;
                 }
                 self.white_hori[i] |= 1 << j;
-                if self.search(stat) {
+                if self.search(stat, limit) {
                     return true;
                 }
                 self.white_hori[i] ^= 1 << j;
+                if stat.num_call >= limit {
+                    return false;
+                }
                 self.black_hori[i] |= 1 << j;
-                if self.search(stat) {
+                if self.search(stat, limit) {
                     return true;
                 }
                 self.black_hori[i] ^= 1 << j;
@@ -207,12 +213,15 @@ impl<'sq> Board<'sq> {
                     continue;
                 }
                 self.white_vert[i] |= 1 << j;
-                if self.search(stat) {
+                if self.search(stat, limit) {
                     return true;
                 }
                 self.white_vert[i] ^= 1 << j;
+                if stat.num_call >= limit {
+                    return false;
+                }
                 self.black_vert[i] |= 1 << j;
-                if self.search(stat) {
+                if self.search(stat, limit) {
                     return true;
                 }
                 self.black_vert[i] ^= 1 << j;
