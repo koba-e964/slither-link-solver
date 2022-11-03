@@ -31,6 +31,16 @@ mod tests {
     #[test]
     fn test_example0() {
         let stat = get_stat(example0());
-        assert_eq!(stat.num_call, 52);
+        assert_eq!(stat.num_call, 6);
+    }
+    #[test]
+    fn test_example1() {
+        let stat = get_stat(example1());
+        assert_eq!(stat.num_call, 2478);
+    }
+    #[test]
+    fn test_example2() {
+        let stat = get_stat(example2());
+        assert_eq!(stat.num_call, 310);
     }
 }

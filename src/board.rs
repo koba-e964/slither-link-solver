@@ -123,7 +123,39 @@ impl<'sq> Board<'sq> {
     }
 
     pub fn check_global(&self) -> Result<(), ()> {
-        Ok(())
+        let n = self.init.len();
+        let m = self.init[0].len();
+        let mut uf = crate::uf::UnionFind::new((n + 1) * (m + 1));
+        let mut vertices = vec![];
+        for i in 0..n + 1 {
+            for j in 0..m {
+                let v = i * (m + 1) + j;
+                if (self.white_hori[i] & 1 << j) == 0 {
+                    uf.unite(v, v + 1);
+                }
+                if (self.black_hori[i] & 1 << j) != 0 {
+                    vertices.push(v);
+                }
+            }
+        }
+        for i in 0..n {
+            for j in 0..m + 1 {
+                let v = i * (m + 1) + j;
+                if (self.white_vert[i] & 1 << j) == 0 {
+                    uf.unite(v, v + m + 1);
+                }
+                if (self.black_vert[i] & 1 << j) != 0 {
+                    vertices.push(v);
+                }
+            }
+        }
+        let mut roots: Vec<_> = vertices.into_iter().map(|v| uf.root(v)).collect();
+        roots.dedup();
+        if roots.len() <= 1 {
+            Ok(())
+        } else {
+            Err(())
+        }
     }
 
     pub fn search(&mut self, stat: &mut Stat) -> bool {
@@ -136,6 +168,14 @@ impl<'sq> Board<'sq> {
         }
         let n = self.init.len();
         let m = self.init[0].len();
+        let old = self.clone();
+        if let Some(_) = self.fill_determined() {
+            if self.search(stat) {
+                return true;
+            }
+            *self = old;
+            return false;
+        }
         // very naive search
         for i in 0..n + 1 {
             let white = self.white_hori[i];
@@ -180,6 +220,131 @@ impl<'sq> Board<'sq> {
             }
         }
         false
+    }
+
+    // Fill segments that are uniquely determined.
+    fn fill_determined(&mut self) -> Option<()> {
+        let n = self.init.len();
+        let m = self.init[0].len();
+        let mut ret = None;
+        // faces
+        for i in 0..n {
+            for j in 0..m {
+                let number = if let Some(number) = self.init[i][j].get_number() {
+                    u32::from(number)
+                } else {
+                    continue;
+                };
+                let white = (self.white_hori[i] & 1 << j).count_ones()
+                    + (self.white_hori[i + 1] & 1 << j).count_ones()
+                    + (self.white_vert[i] & 3 << j).count_ones();
+                let black = (self.black_hori[i] & 1 << j).count_ones()
+                    + (self.black_hori[i + 1] & 1 << j).count_ones()
+                    + (self.black_vert[i] & 3 << j).count_ones();
+                let black_limit = 4 - white;
+                if number == black_limit && number > black {
+                    // fill with black
+                    self.black_hori[i] |= !self.white_hori[i] & 1 << j;
+                    self.black_hori[i + 1] |= !self.white_hori[i + 1] & 1 << j;
+                    self.black_vert[i] |= !self.white_vert[i] & 3 << j;
+                    ret = Some(());
+                }
+                if number == black && number < black_limit {
+                    // fill with white
+                    self.white_hori[i] |= !self.black_hori[i] & 1 << j;
+                    self.white_hori[i + 1] |= !self.black_hori[i + 1] & 1 << j;
+                    self.white_vert[i] |= !self.black_vert[i] & 3 << j;
+                    ret = Some(());
+                }
+            }
+        }
+        // vertices
+        for i in 0..n + 1 {
+            for j in 0..m + 1 {
+                let mut black = 0;
+                let mut black_limit = 0;
+                let mut unfilled = vec![];
+                if i > 0 {
+                    if (self.black_vert[i - 1] & 1 << j) != 0 {
+                        black += 1;
+                    }
+                    if (self.white_vert[i - 1] & 1 << j) == 0 {
+                        black_limit += 1;
+                    }
+                    if ((self.black_vert[i - 1] | self.white_vert[i - 1]) & 1 << j) == 0 {
+                        unfilled.push((i - 1, j, 1));
+                    }
+                }
+                if j > 0 {
+                    if (self.black_hori[i] & 1 << (j - 1)) != 0 {
+                        black += 1;
+                    }
+                    if (self.white_hori[i] & 1 << (j - 1)) == 0 {
+                        black_limit += 1;
+                    }
+                    if ((self.black_hori[i] | self.white_hori[i]) & 1 << (j - 1)) == 0 {
+                        unfilled.push((i, j - 1, 0));
+                    }
+                }
+                if i < n {
+                    if (self.black_vert[i] & 1 << j) != 0 {
+                        black += 1;
+                    }
+                    if (self.white_vert[i] & 1 << j) == 0 {
+                        black_limit += 1;
+                    }
+                    if ((self.black_vert[i] | self.white_vert[i]) & 1 << j) == 0 {
+                        unfilled.push((i, j, 1));
+                    }
+                }
+                if j < m {
+                    if (self.black_hori[i] & 1 << j) != 0 {
+                        black += 1;
+                    }
+                    if (self.white_hori[i] & 1 << j) == 0 {
+                        black_limit += 1;
+                    }
+                    if ((self.black_hori[i] | self.white_hori[i]) & 1 << j) == 0 {
+                        unfilled.push((i, j, 0));
+                    }
+                }
+                // 0?
+                if black == 0 && black_limit == 1 {
+                    for &(x, y, kind) in &unfilled {
+                        if kind == 0 {
+                            self.white_hori[x] |= 1 << y;
+                        } else {
+                            self.white_vert[x] |= 1 << y;
+                        }
+                    }
+                    ret = Some(());
+                }
+                // 2?
+                if black == 1 && black_limit == 2 {
+                    for &(x, y, kind) in &unfilled {
+                        if kind == 0 {
+                            self.black_hori[x] |= 1 << y;
+                        } else {
+                            self.black_vert[x] |= 1 << y;
+                        }
+                    }
+                    ret = Some(());
+                }
+                // 2?
+                if black == 2 && black_limit > 2 {
+                    for &(x, y, kind) in &unfilled {
+                        if kind == 0 {
+                            self.white_hori[x] |= 1 << y;
+                        } else {
+                            self.white_vert[x] |= 1 << y;
+                        }
+                    }
+                    ret = Some(());
+                }
+            }
+        }
+
+        ret
     }
 }
 

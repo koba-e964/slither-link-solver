@@ -9,6 +9,6 @@ fn main() {
     let result = board.search(&mut stat);
     println!("result = {}", result);
     println!("{}", board);
-    // stat = Stat { num_call: 52 }
+    // stat = Stat { num_call: 6 }
     println!("stat = {:?}", stat);
 }
