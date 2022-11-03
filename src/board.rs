@@ -169,7 +169,7 @@ impl<'sq> Board<'sq> {
         let n = self.init.len();
         let m = self.init[0].len();
         let old = self.clone();
-        if let Some(_) = self.fill_determined() {
+        if self.fill_determined().is_some() {
             if self.search(stat) {
                 return true;
             }
