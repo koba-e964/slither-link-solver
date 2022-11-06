@@ -35,6 +35,11 @@ pub fn example5() -> Vec<Vec<Square>> {
         .unwrap()
 }
 
+pub fn example6() -> Vec<Vec<Square>> {
+    // https://puzsq.logicpuzzle.app/puzzle/15552
+    parse_from_puzz_link("https://puzz.link/p?slither/25/15/g3c27ch18c3dgd2cg2c62ch62di2di3cjcga3a0dg3ag2c38dhdj2ci2cg2d3ah18d0dg2di03c70bh62b2dg2cg2cjbgcj1bg1cg2a38dh07c20ci1bg1d82ch0c2ag3bi2djch61c3dg3ag2b1cbgdj1di2di08ch37c2dg3acg2d72bh53d2d").unwrap()
+}
+
 #[cfg(test)]
 mod tests {
     use crate::board::{Board, Stat};
@@ -44,7 +49,7 @@ mod tests {
     fn get_stat(board: Vec<Vec<Square>>) -> Stat {
         let mut board = Board::new(&board);
         let mut stat = Stat::default();
-        let result = board.search(&mut stat, 100_000);
+        let result = board.search(&mut stat, 1_000_000);
         assert!(result);
         stat
     }
@@ -77,5 +82,10 @@ mod tests {
     fn test_example5() {
         let stat = get_stat(example5());
         assert_eq!(stat.num_call, 1891);
+    }
+    #[test]
+    fn test_example6() {
+        let stat = get_stat(example6());
+        assert_eq!(stat.num_call, 422980);
     }
 }
